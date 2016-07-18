@@ -1,5 +1,11 @@
 # framework
 
+####关于SosoApi:  
+专注于API接口文档管理及线上线下测试的API服务在线工具。  
+SosoApi网站：www.sosoapi.com  
+论坛：bbs.sosoapi.com  
+qq群：305629848  
+
 ####简介:  
 framework集成比较常用的开发组件，服务于sosoapi-web项目。  
 该基础组件开发语言为java,jdk 1.7,采用maven构建。
