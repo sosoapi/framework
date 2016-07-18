@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dev.demo.dao.DemoDao">
+	<select id="foreach" resultType="demo">
+		select 
+			* 
+		from 
+			demo
+		where
+			1 = 1
+		and 
+			<foreach collection="value1" index="key" item="value" separator="or">  
+		    	(id = #{key} and name = #{value})
+		    </foreach> 
+		and
+			<foreach collection="idInfoList" item="idInfo" separator="or">  
+		    	(id != #{key} and name != #{value})
+		    </foreach>   
+	</select>
+	
+	<select id="listPage" resultType="demo">
+		select * from demo limit #{pageStart},#{pageSize}
+	</select>
+	
+	<insert id="add" parameterType="demo" useGeneratedKeys="true" keyProperty="id">
+		insert into demo
+		(
+			name,first_name,last_name,create_date,modify_date,status
+		)
+		values
+		(
+			#{name},#{firstName},#{lastName},#{createDate},#{modifyDate},#{status}
+		)
+	</insert>
+	
+	<select id="find" resultType="demo">
+		select * from demo where name = #{name} and age = #{age}
+	</select>
+	
+	<insert id="batchAdd" parameterType="list">
+		insert into demo
+			(
+				name,
+				age,
+				valid,
+				first_name,
+				last_name,
+				create_date,
+				modify_date,
+				status
+			)
+		values
+  		<foreach collection="list" item="item" index="index" separator=",">
+  			(
+				#{item.name},
+				#{item.age},
+				#{item.valid},
+				#{item.firstName},
+				#{item.lastName},
+				#{item.createDate},
+				#{item.modifyDate},
+				#{item.status}
+			)	
+  		</foreach>
+	</insert>
+</mapper>

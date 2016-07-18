@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.1.xsd
+	http://www.springframework.org/schema/mvc
+	http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-3.1.xsd">
+	
+	<!-- 加载JDBC配置文件 -->
+	<context:property-placeholder location="classpath:jdbc-mysql.properties" ignore-unresolvable="true"/>
+	<context:component-scan base-package="com.dev" />
+	
+	<!-- 写数据源 -->
+	<bean id="writeDataSource" class="com.jolbox.bonecp.BoneCPDataSource" destroy-method="close">
+		<property name="driverClass" value="${jdbc.driverClassName}" />
+		<property name="jdbcUrl" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+	
+	<!-- 只读数据源 -->
+	<bean id="readDataSource" class="com.jolbox.bonecp.BoneCPDataSource" destroy-method="close">
+		<property name="driverClass" value="${jdbc.read.driverClassName}" />
+		<property name="jdbcUrl" value="${jdbc.read.url}" />
+		<property name="username" value="${jdbc.read.username}" />
+		<property name="password" value="${jdbc.read.password}" />
+	</bean>
+	
+	<!-- 多数据源 -->
+	<bean id="multipleDataSource" class="com.dev.base.jdbc.datasource.MultipleDataSource">
+		<!-- 默认数据源 -->
+		<property name="defaultTargetDataSource" ref="writeDataSource"/>
+        <property name="targetDataSources">
+            <map>     
+                <!-- 注意这里的value是和上面的DataSource的id对应，key要和下面的DataSourceContextHolder中的常量对应 -->
+                <entry value-ref="writeDataSource" key="writeDataSource"/>
+                <entry value-ref="readDataSource" key="readDataSource"/>
+            </map>   
+        </property>
+	</bean>
+	
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="multipleDataSource" />
+		<property name="configLocation" value="classpath:mybatis-cfg.xml" />
+		<property name="mapperLocations">
+			<list>
+				<value>classpath*:com/dev/**/*_mapper.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.dev" />
+		<property name="markerInterface" value="com.dev.base.mybatis.dao.BaseMybatisDao" />
+	</bean>
+	
+	<!-- 注解式事务 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="writeDataSource" />
+	</bean>
+	
+	<tx:annotation-driven proxy-target-class="true" transaction-manager="transactionManager" />
+	<aop:aspectj-autoproxy />
+	
+	<!-- 编程式事务 -->
+	<bean class="com.dev.base.mybatis.utils.transaction.TransactionUtils">
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+	
+	<!-- 注解处理 -->
+	<bean id="readDataSourceHandler" class="com.dev.base.jdbc.annotation.handler.ReadDataSourceHandler">  
+		<property name="defaultTargetDataSource" value="readDataSource"/>
+	</bean>
+    <aop:config>  
+    	<!-- 数据库读写分离 -->
+        <aop:aspect id="readDataSourceAspect" ref="readDataSourceHandler">  
+            <aop:pointcut id="readDataSourcePointCut" expression="execution(* com.dev..*.service.*.*(..)) &amp;&amp; @annotation(ds)"/>  
+            <aop:around method="doAround"  pointcut-ref="readDataSourcePointCut"/>  
+        </aop:aspect>  
+    </aop:config>  
+</beans>
